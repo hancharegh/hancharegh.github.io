@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Генератор имён Балерино Капучино</title>
+    <style>
+        body {
+            font-family: 'Georgia', serif;
+            background: linear-gradient(to right, #f5e6ca, #e6d5b8);
+            text-align: center;
+            padding: 40px;
+        }
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            max-width: 500px;
+            margin: 0 auto;
+        }
+        h1 {
+            color: #6f4e37;
+            font-size: 28px;
+        }
+        input {
+            padding: 12px;
+            width: 70%;
+            border: 2px dashed #c0a080;
+            border-radius: 10px;
+            font-size: 16px;
+        }
+        button {
+            background: #a38f6d;
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            margin-top: 20px;
+            border-radius: 50px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.3s;
+        }
+        button:hover {
+            background: #8a7251;
+            transform: scale(1.05);
+        }
+        #result {
+            margin-top: 30px;
+            font-size: 24px;
+            color: #6f4e37;
+            min-height: 60px;
+            font-weight: bold;
+        }
+        .coffee-icon {
+            font-size: 40px;
+            margin: 20px;
+        }
+        .ballerina {
+            width: 100px;
+            opacity: 0.8;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <img src="https://i.imgur.com/JYQ3W3a.png" alt="Ballerina" class="ballerina">
+        <h1>Генератор имён в стиле<br>Балерино Капучино</h1>
+        
+        <p>Введите ваше имя и узнайте свою балетно-кофейную личность!</p>
+        
+        <input type="text" id="nameInput" placeholder="Например: Анна">
+        <button onclick="generateName()">Превратить!</button>
+        
+        <div id="result"></div>
+        <div class="coffee-icon">☕🩰</div>
+    </div>
+
+    <script>
+        const coffeeParts = ["Капучи", "Эспресс", "Латт", "Раф", "Мокко", "Флэт", "Айриш", "Гляссе"];
+        const balletParts = ["рина", "тесса", "нелла", "рола", "джина", "фуэта", "па-де", "жете"];
+        const endings = ["-кофф", "-брюле", "-мания", "-бланш", "-арабика", "-штрудель"];
+        
+        function generateName() {
+            const userName = document.getElementById('nameInput').value.trim();
+            if (!userName) {
+                alert("Введите имя, дорогая Балерино!");
+                return;
+            }
+            
+            // Создаём уникальное имя на основе ввода
+            const seed = userName.length + userName.charCodeAt(0);
+            const coffeePart = coffeeParts[seed % coffeeParts.length];
+            const balletPart = balletParts[(seed + 1) % balletParts.length];
+            const ending = endings[(seed + 2) % endings.length];
+            
+            const generatedName = `${coffeePart}${balletPart}${ending}`;
+            
+            // Показываем результат с анимацией
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = `Ваше имя:<br><span style="font-size:32px">${generatedName}</span>`;
+            
+            // Добавляем персонализированное описание
+            const descriptions = [
+                `Как и ${userName}, вы излучаете грацию и кофейный аромат!`,
+                `Ваше па-де-кофе просто идеально!`,
+                `Вы танцуете по жизни, как ${generatedName}!`,
+                `Кофейные зерна шепчут ваше имя!`
+            ];
+            
+            setTimeout(() => {
+                resultDiv.innerHTML += `<p style="font-size:16px">${descriptions[seed % descriptions.length]}</p>`;
+            }, 1000);
+        }
+    </script>
+</body>
+</html>
