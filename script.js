@@ -1,7 +1,8 @@
 console.log("JS loaded");
+
 const supabase = window.supabase.createClient(
-  "https://zappjgtkkruwrnuolkkl.supabase.co/rest/v1/",
-  "sb_publishable_YgZVl-xy_A2bXlgX8UOtBA_SDhaSbHl"
+  "https://zappjgtkkruwrnuolkkl.supabase.co",
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InphcHBqZ3Rra3J1d3JudW9sa2tsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc5NjkyMDksImV4cCI6MjA5MzU0NTIwOX0.MFL8_lXgzMq6hOSXh7qWe1yrv054a43XMjNlFjdb-Ko"
 );
 
 let currentUser = null;
@@ -13,11 +14,17 @@ async function login() {
   const name = document.getElementById("name").value.trim();
   const password = document.getElementById("password").value.trim();
 
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("users")
     .select("")
     .eq("name", name)
     .eq("password", password);
+
+  if (error) {
+    console.error(error);
+    alert("Ошибка подключения");
+    return;
+  }
 
   if (!data || data.length === 0) {
     alert("Неверный логин");
