@@ -154,3 +154,4 @@ async function loadReport() {
     list.appendChild(li);
   });
 }
+window.login = login;
