@@ -1,3 +1,4 @@
+console.log("JS loaded");
 const supabase = window.supabase.createClient(
   "https://zappjgtkkruwrnuolkkl.supabase.co/rest/v1/",
   "sb_publishable_YgZVl-xy_A2bXlgX8UOtBA_SDhaSbHl"
