@@ -16,7 +16,7 @@ async function login() {
 
   const { data, error } = await supabase
     .from("users")
-    .select("")
+    .select("*")
     .eq("name", name)
     .eq("password", password);
 
@@ -46,7 +46,7 @@ async function checkStudent() {
 
   const { data } = await supabase
     .from("students")
-    .select("")
+    .select("*")
     .eq("id", id);
 
   const info = document.getElementById("studentInfo");
@@ -69,8 +69,12 @@ async function loadItems() {
   div.innerHTML = "";
 
   items.forEach(item => {
-    div.innerHTML +=       <div>         ${item.name} (${item.monthly_limit})         <input type="number" id="item_${item.id}" value="0">       </div>    ;
-  });
+   div.innerHTML += `
+  <div>
+    ${item.name} (${item.monthly_limit})
+    <input type="number" id="item_${item.id}" value="0">
+  </div>
+`;
 }
 
 // Месяц
@@ -84,7 +88,7 @@ async function getReportId() {
 
   let { data } = await supabase
     .from("reports")
-    .select("")
+    .select("*")
     .eq("month", month);
 
   if (!data || data.length === 0) {
@@ -146,7 +150,7 @@ async function loadReport() {
 
   data.forEach(e => {
     const li = document.createElement("li");
-    li.textContent = ${e.student_id} | ${e.created_at};
+    li.textContent = `${e.student_id} | ${e.created_at}`;
     list.appendChild(li);
   });
 }
