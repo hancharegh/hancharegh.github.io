@@ -612,15 +612,16 @@ $('#counterEditBtn').onclick = () => { closeModal('counterModal'); openModal('da
 $('#dateSaveBtn').onclick = () => {
   const val = $('#dateInput').value;
   if(!val) return;
-  db.collection('couple').doc('info').set({ startDate: val }, { merge:true });
-  closeModal('dateModal');
+  db.collection('couple').doc('info').set({ startDate: val }, { merge:true })
+    .then(() => closeModal('dateModal'))
+    .catch((e) => { console.error(e); toast('Не сохранилось — проверь Rules в Firestore (⚙️)'); });
 };
 function watchRelationshipDoc(){
   db.collection('couple').doc('info').onSnapshot((doc) => {
     const data = doc.data();
     if(data && data.startDate){ relStartDate = data.startDate; updateCounterPill(); updateHomeRing(); renderProfile(); }
     else { $('#counterPill').textContent = '💞 указать дату'; }
-  });
+  }, (e) => { console.error(e); toast('Не читается база — проверь Rules в Firestore (⚙️)'); });
 }
 function updateCounterPill(){ const days = daysSince(relStartDate); $('#counterPill').textContent = `💞 ${days} ${ruDays(days)}`; }
 function daysSince(dateStr){
@@ -682,8 +683,9 @@ function saveMood(mood, btnGroup){
   db.collection('moods').doc(personId + '_' + date).set({
     date, mood, author: localStorage.getItem('ut_name') || 'Аноним', personId,
     createdAt: firebase.firestore.FieldValue.serverTimestamp()
-  }, { merge:true });
-  $$(btnGroup + ' .mood-btn').forEach(b => b.classList.toggle('selected', b.dataset.mood === mood));
+  }, { merge:true }).then(() => {
+    $$(btnGroup + ' .mood-btn').forEach(b => b.classList.toggle('selected', b.dataset.mood === mood));
+  }).catch((e) => { console.error(e); toast('Не сохранилось — проверь Rules в Firestore (⚙️)'); });
 }
 buildMoodRow($('#homeMoodRow'), (m) => saveMood(m, '#homeMoodRow'));
 buildMoodRow($('#moodTodayRow'), (m) => saveMood(m, '#moodTodayRow'));
@@ -705,7 +707,7 @@ function watchTodayMoods(){
     } else {
       $('#homePartnerMood').textContent = 'партнёр ещё не отметил настроение сегодня';
     }
-  });
+  }, (e) => { console.error(e); toast('Не читается база — проверь Rules в Firestore (⚙️)'); });
 }
 
 /* ---------------- Mood calendar ---------------- */
@@ -792,7 +794,7 @@ function loadMemories(){
       card.querySelector('.mem-meta span:last-child').textContent = dateStr;
       list.appendChild(card);
     });
-  });
+  }, (e) => { console.error(e); toast('Не читается лента — проверь Rules в Firestore (⚙️)'); });
 }
 
 /* ---------------- Draw together ---------------- */
