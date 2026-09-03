@@ -11,7 +11,6 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.4/peerjs.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
 <style>
   :root{
     --ink:#0f1524; --ink-2:#161f34; --ink-3:#1e2a45;
@@ -23,10 +22,7 @@
   html,body{height:100%;}
   body{
     margin:0;
-    background:
-      radial-gradient(ellipse 900px 500px at 15% -10%, rgba(232,166,89,0.10), transparent 60%),
-      radial-gradient(ellipse 700px 600px at 100% 110%, rgba(232,137,154,0.08), transparent 60%),
-      var(--ink);
+    background:var(--ink);
     color:var(--paper);
     font-family:'Manrope',sans-serif;
     -webkit-font-smoothing:antialiased;
@@ -37,6 +33,18 @@
   button{font-family:inherit;}
   ::selection{background:rgba(232,166,89,0.35);}
   a{color:var(--amber);}
+
+  /* ---------- ambient background ---------- */
+  .bg-decor{position:fixed;inset:0;z-index:-3;overflow:hidden;pointer-events:none;}
+  .bg-blob{position:absolute;border-radius:50%;filter:blur(80px);opacity:.28;will-change:transform;}
+  .bg-blob.a{width:560px;height:460px;top:-140px;left:-100px;background:var(--amber);animation:blobDriftA 26s ease-in-out infinite;}
+  .bg-blob.b{width:480px;height:480px;bottom:-180px;right:-120px;background:var(--rose);animation:blobDriftB 32s ease-in-out infinite;}
+  @keyframes blobDriftA{0%,100%{transform:translate(0,0) scale(1);}33%{transform:translate(50px,-35px) scale(1.1);}66%{transform:translate(-25px,20px) scale(0.94);}}
+  @keyframes blobDriftB{0%,100%{transform:translate(0,0) scale(1);}40%{transform:translate(-40px,30px) scale(1.08);}70%{transform:translate(30px,-25px) scale(0.96);}}
+  #bgCanvas{position:fixed;inset:0;z-index:-2;pointer-events:none;}
+  @media (prefers-reduced-motion: reduce){
+    .bg-blob{animation:none !important;}
+  }
 
   /* ---------- TOP NAV ---------- */
   #topnav{
@@ -282,6 +290,8 @@
 </style>
 </head>
 <body>
+<div class="bg-decor"><div class="bg-blob a"></div><div class="bg-blob b"></div></div>
+<canvas id="bgCanvas"></canvas>
 
 <div id="topnav">
   <div class="nav-left">
@@ -485,12 +495,11 @@
     <ol class="setup-steps">
       <li>Зайди на <a href="https://console.firebase.google.com" target="_blank">console.firebase.google.com</a> → «Add project» → любое имя.</li>
       <li>Слева: <b>Build → Firestore Database → Create database</b> → режим <b>test mode</b>.</li>
-      <li>Слева: <b>Build → Storage → Get started</b> → тоже test mode.</li>
       <li>⚙️ → <b>Project settings</b> → «Your apps» → значок <code class="inline">&lt;/&gt;</code> (Web app) → зарегистрируй.</li>
       <li>Появится блок <code class="inline">firebaseConfig</code> — скопируй целиком и вставь сюда:</li>
     </ol>
     <textarea class="name-input" id="fbConfigInput" rows="6" placeholder='const firebaseConfig = { apiKey: "...", authDomain: "...", ... };'></textarea>
-    <p class="hint" style="margin-top:0;">Через 30 дней тестовый режим Firestore/Storage истечёт. В Rules обеих секций поставь навсегда <code class="inline">allow read, write: if true;</code> и опубликуй. Правила открытые, поэтому просто не публикуй эту ссылку и конфиг никому, кроме своей половинки.</p>
+    <p class="hint" style="margin-top:0;">Через 30 дней тестовый режим Firestore истечёт. В Rules поставь навсегда <code class="inline">allow read, write: if true;</code> и опубликуй. Правила открытые, поэтому просто не публикуй эту ссылку и конфиг никому, кроме своей половинки. Storage не нужен — фото хранятся прямо в Firestore.</p>
     <div class="modal-actions"><button class="btn" id="setupCancelBtn">Позже</button><button class="btn btn-primary" id="setupSaveBtn">Подключить</button></div>
     <div class="error-box" id="setupError"></div>
   </div>
@@ -527,6 +536,67 @@
 <script>
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => Array.from(document.querySelectorAll(sel));
+
+/* ---------------- Ambient background particles ---------------- */
+(function ambientBackground(){
+  const canvas = document.getElementById('bgCanvas');
+  const ctx = canvas.getContext('2d');
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let W, H, particles = [];
+  function hexToRgb(hex){
+    const m = hex.trim().match(/^#([0-9a-f]{6})$/i);
+    if(!m) return {r:232,g:166,b:89};
+    const n = parseInt(m[1],16);
+    return { r:(n>>16)&255, g:(n>>8)&255, b:n&255 };
+  }
+  function currentColors(){
+    const cs = getComputedStyle(document.documentElement);
+    return [hexToRgb(cs.getPropertyValue('--amber')), hexToRgb(cs.getPropertyValue('--rose'))];
+  }
+  function resize(){
+    W = canvas.width = window.innerWidth;
+    H = canvas.height = window.innerHeight;
+  }
+  function makeParticle(){
+    const colors = currentColors();
+    const c = colors[Math.random() < 0.6 ? 0 : 1];
+    return {
+      x: Math.random()*W, y: H + Math.random()*80,
+      r: 1.2 + Math.random()*2.2,
+      speed: 0.15 + Math.random()*0.35,
+      drift: (Math.random()-0.5)*0.3,
+      alphaMax: 0.18 + Math.random()*0.28,
+      phase: Math.random()*Math.PI*2,
+      color: c
+    };
+  }
+  const COUNT = window.innerWidth < 700 ? 22 : 40;
+  function init(){
+    resize();
+    particles = Array.from({length:COUNT}, () => { const p = makeParticle(); p.y = Math.random()*H; return p; });
+  }
+  let t = 0;
+  function frame(){
+    t += 0.016;
+    ctx.clearRect(0,0,W,H);
+    particles.forEach(p => {
+      p.y -= p.speed;
+      p.x += Math.sin(t + p.phase) * p.drift;
+      if(p.y < -20){ Object.assign(p, makeParticle()); p.y = H + 10; }
+      const flicker = 0.6 + 0.4*Math.sin(t*1.8 + p.phase);
+      const a = p.alphaMax * flicker;
+      const grd = ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,p.r*5);
+      grd.addColorStop(0, `rgba(${p.color.r},${p.color.g},${p.color.b},${a})`);
+      grd.addColorStop(1, `rgba(${p.color.r},${p.color.g},${p.color.b},0)`);
+      ctx.fillStyle = grd;
+      ctx.beginPath(); ctx.arc(p.x, p.y, p.r*5, 0, Math.PI*2); ctx.fill();
+    });
+    if(!reduceMotion) requestAnimationFrame(frame);
+  }
+  window.addEventListener('resize', () => { resize(); });
+  init();
+  requestAnimationFrame(frame);
+})();
 
 /* ---------------- Person identity ---------------- */
 function uuid(){ return 'p-' + Math.random().toString(36).slice(2,10) + Date.now().toString(36); }
@@ -587,7 +657,6 @@ function initFirebase(cfg){
   try{
     if(!firebase.apps.length) firebase.initializeApp(cfg);
     db = firebase.firestore();
-    storage = firebase.storage();
     fbReady = true;
     $('#fbStatusLine').innerHTML = '<span class="lamp lit"></span> подключено · проект «' + cfg.projectId + '»';
     watchRelationshipDoc();
@@ -752,6 +821,22 @@ $('#memAddBtn').onclick = () => {
   openModal('memModal');
 };
 $('#memCancelBtn').onclick = () => closeModal('memModal');
+function compressImageToDataURL(file, maxW){
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const reader = new FileReader();
+    reader.onload = (e) => { img.onload = () => {
+      const scale = Math.min(1, maxW / img.width);
+      const w = Math.round(img.width * scale), h = Math.round(img.height * scale);
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      resolve(canvas.toDataURL('image/jpeg', 0.72));
+    }; img.onerror = reject; img.src = e.target.result; };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
 $('#memSaveBtn').onclick = async () => {
   const text = $('#memTextInput').value.trim();
   const file = $('#memImageInput').files[0];
@@ -759,21 +844,19 @@ $('#memSaveBtn').onclick = async () => {
   if(!text && !file){ errEl.textContent='Добавь фото или пару слов.'; errEl.style.display='block'; return; }
   $('#memSaveBtn').textContent='Сохраняю…'; $('#memSaveBtn').disabled=true;
   try{
-    let imageURL = null;
+    let imageData = null;
     if(file){
-      const path = `memories/${Date.now()}_${file.name}`;
-      const ref = storage.ref(path);
-      await ref.put(file);
-      imageURL = await ref.getDownloadURL();
+      imageData = await compressImageToDataURL(file, 1000);
+      if(imageData.length > 900000){ imageData = await compressImageToDataURL(file, 650); }
     }
     await db.collection('memories').add({
-      text: text||'', imageURL, author: localStorage.getItem('ut_name')||'Аноним',
+      text: text||'', imageData, author: localStorage.getItem('ut_name')||'Аноним',
       createdAt: firebase.firestore.FieldValue.serverTimestamp()
     });
     closeModal('memModal');
   }catch(e){
     console.error(e);
-    errEl.textContent='Не получилось сохранить. Проверь Rules в Firestore/Storage (⚙️).';
+    errEl.textContent='Не получилось сохранить. Проверь Rules в Firestore (⚙️).';
     errEl.style.display='block';
   }finally{ $('#memSaveBtn').textContent='Сохранить'; $('#memSaveBtn').disabled=false; }
 };
@@ -787,7 +870,8 @@ function loadMemories(){
       const d = doc.data();
       const card = document.createElement('div'); card.className='mem-card';
       const dateStr = d.createdAt && d.createdAt.toDate ? d.createdAt.toDate().toLocaleDateString('ru-RU',{day:'numeric',month:'long',year:'numeric'}) : '';
-      card.innerHTML = `${d.imageURL?`<img src="${d.imageURL}" loading="lazy">`:''}
+      const src = d.imageData || d.imageURL;
+      card.innerHTML = `${src?`<img src="${src}" loading="lazy">`:''}
         <div class="mem-body">${d.text?'<p class="mem-text"></p>':''}<div class="mem-meta"><span class="who"></span><span></span></div></div>`;
       if(d.text) card.querySelector('.mem-text').textContent = d.text;
       card.querySelector('.who').textContent = d.author||'Аноним';
