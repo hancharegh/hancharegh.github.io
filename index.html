@@ -1,38 +1,1136 @@
 <!DOCTYPE html>
-<html>
+<html lang="ru">
 <head>
-  <meta charset="UTF-8">
-  <title>Profcom</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Вместе · пространство для двоих</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🕯️</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.4/peerjs.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
+<style>
+  :root{
+    --ink:#0f1524; --ink-2:#161f34; --ink-3:#1e2a45;
+    --paper:#f3ede2; --amber:#e8a659; --amber-dim:#8a6a3c; --rose:#e8899a;
+    --line:rgba(243,237,226,0.10); --line-2:rgba(243,237,226,0.16);
+    --shadow-glow: 0 0 60px rgba(232,166,89,0.10);
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{
+    margin:0;
+    background:
+      radial-gradient(ellipse 900px 500px at 15% -10%, rgba(232,166,89,0.10), transparent 60%),
+      radial-gradient(ellipse 700px 600px at 100% 110%, rgba(232,137,154,0.08), transparent 60%),
+      var(--ink);
+    color:var(--paper);
+    font-family:'Manrope',sans-serif;
+    -webkit-font-smoothing:antialiased;
+    min-height:100%;
+    transition:background-color .4s ease, color .4s ease;
+  }
+  h1,h2,h3,.serif{font-family:'Fraunces',serif;}
+  button{font-family:inherit;}
+  ::selection{background:rgba(232,166,89,0.35);}
+  a{color:var(--amber);}
 
-  <!-- Supabase -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+  /* ---------- TOP NAV ---------- */
+  #topnav{
+    position:sticky;top:0;z-index:60;
+    display:flex;align-items:center;justify-content:space-between;gap:12px;
+    padding:12px 20px;border-bottom:1px solid var(--line);
+    background:rgba(15,21,36,0.82);backdrop-filter:blur(10px);
+  }
+  .nav-left{display:flex;align-items:center;gap:14px;min-width:0;}
+  .nav-title{font-family:'Fraunces',serif;font-size:16px;font-weight:500;flex-shrink:0;}
+  .nav-tabs{display:flex;gap:4px;background:var(--ink-2);padding:4px;border-radius:11px;border:1px solid var(--line);overflow-x:auto;max-width:100%;}
+  .nav-tabs::-webkit-scrollbar{display:none;}
+  .nav-tab{
+    border:none;background:transparent;color:rgba(243,237,226,0.55);
+    padding:8px 12px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;
+    transition:background .2s, color .2s;white-space:nowrap;flex-shrink:0;
+  }
+  .nav-tab.active{background:var(--ink-3);color:var(--paper);}
+  .nav-right{display:flex;align-items:center;gap:8px;flex-shrink:0;}
+  .counter-pill{
+    display:flex;align-items:center;gap:7px;
+    background:linear-gradient(180deg,#3a2c17,#2c2110);
+    border:1px solid rgba(232,166,89,0.3);
+    padding:8px 14px;border-radius:999px;font-size:13px;font-weight:600;
+    cursor:pointer;color:var(--amber);white-space:nowrap;
+  }
+  .icon-btn{
+    background:var(--ink-3);border:1px solid var(--line);color:var(--paper);
+    width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;
+    cursor:pointer;font-size:16px;transition:background .2s;flex-shrink:0;
+  }
+  .icon-btn:hover{background:#243456;}
+  .view{display:none;}
+  .view.active{display:block;}
+
+  /* ---------- shared bits ---------- */
+  .btn{
+    appearance:none;border:1px solid var(--line-2);background:var(--ink-3);color:var(--paper);
+    padding:14px 22px;border-radius:12px;font-size:15px;font-weight:600;cursor:pointer;
+    transition:transform .15s ease, background .2s ease, border-color .2s ease;width:100%;
+  }
+  .btn:hover{background:#243456;border-color:rgba(232,166,89,0.4);}
+  .btn:active{transform:scale(.98);}
+  .btn-primary{background:linear-gradient(180deg, #efb46f, var(--amber));color:#1a1206;border:none;}
+  .btn-primary:hover{filter:brightness(1.06);}
+  .name-input, textarea.name-input{
+    width:100%;background:var(--ink-2);border:1px solid var(--line);color:var(--paper);
+    padding:13px 16px;border-radius:12px;font-size:15px;margin-bottom:12px;outline:none;
+    transition:border-color .2s;font-family:inherit;
+  }
+  .name-input:focus{border-color:var(--amber);}
+  .name-input::placeholder{color:rgba(243,237,226,0.32);}
+  .lamp{
+    width:14px;height:14px;border-radius:50%;background:var(--amber-dim);
+    box-shadow:0 0 0 rgba(232,166,89,0);display:inline-block;
+    transition:background .6s ease, box-shadow .6s ease;
+  }
+  .lamp.lit{background:var(--amber);box-shadow:0 0 18px 4px rgba(232,166,89,0.55);animation:flicker 3.2s ease-in-out infinite;}
+  @keyframes flicker{0%,100%{opacity:1;}45%{opacity:.86;}50%{opacity:1;}72%{opacity:.92;}}
+  .eyebrow{
+    letter-spacing:.14em;text-transform:uppercase;font-size:11px;color:var(--amber);font-weight:600;
+    margin-bottom:18px;display:flex;align-items:center;justify-content:center;gap:8px;
+  }
+  .hint{font-size:12.5px;color:rgba(243,237,226,0.4);margin-top:16px;line-height:1.5;}
+  .error-box{
+    background:rgba(232,137,154,0.12);border:1px solid rgba(232,137,154,0.35);color:#f3c3cd;
+    padding:12px 14px;border-radius:10px;font-size:13.5px;margin-top:16px;display:none;
+  }
+  .empty-state{text-align:center;padding:60px 20px;color:rgba(243,237,226,0.4);border:1px dashed var(--line-2);border-radius:16px;font-size:14px;}
+  .section-head{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:22px;flex-wrap:wrap;}
+  .section-head h2{font-size:24px;font-weight:500;margin:0 0 4px;}
+  .section-head p{margin:0;color:rgba(243,237,226,0.5);font-size:14px;}
+
+  /* ---------- LOBBY ---------- */
+  #lobby{min-height:calc(100vh - 61px);display:flex;align-items:center;justify-content:center;padding:24px;}
+  .lobby-card{width:100%;max-width:420px;text-align:center;}
+  .lobby-card h1{font-size:clamp(28px,6vw,40px);font-weight:500;line-height:1.15;margin:0 0 12px;}
+  .lobby-card p.sub{color:rgba(243,237,226,0.62);font-size:15px;line-height:1.55;margin:0 0 34px;}
+  .waiting-block, .link-block{display:none;}
+  .link-box{display:flex;gap:8px;margin-top:18px;}
+  .link-box input{flex:1;background:var(--ink-2);border:1px solid var(--line);color:var(--paper);padding:12px 14px;border-radius:10px;font-size:13px;font-family:monospace;}
+  .link-box button{width:auto;padding:12px 16px;}
+  .qr-box{margin-top:16px;display:flex;justify-content:center;}
+  .qr-box img{border-radius:12px;border:6px solid var(--paper);}
+  .pulse-dots{display:flex;gap:6px;justify-content:center;margin:22px 0 6px;}
+  .pulse-dots span{width:7px;height:7px;border-radius:50%;background:var(--amber);animation:pulse 1.4s ease-in-out infinite;}
+  .pulse-dots span:nth-child(2){animation-delay:.2s;}
+  .pulse-dots span:nth-child(3){animation-delay:.4s;}
+  @keyframes pulse{0%,80%,100%{opacity:.25;transform:scale(.8);}40%{opacity:1;transform:scale(1);}}
+
+  /* ---------- ROOM ---------- */
+  #room{display:none;}
+  #room.active{display:block;}
+  header.bar{
+    display:flex;align-items:center;justify-content:space-between;padding:14px 20px;
+    border-bottom:1px solid var(--line);background:rgba(15,21,36,0.7);backdrop-filter:blur(8px);
+  }
+  .bar-left{display:flex;align-items:center;gap:12px;}
+  .bar-title{font-family:'Fraunces',serif;font-size:16px;font-weight:500;}
+  .presence{display:flex;align-items:center;gap:6px;font-size:12px;color:rgba(243,237,226,0.55);}
+  .bar-right{display:flex;align-items:center;gap:8px;}
+  .layout{display:grid;grid-template-columns:1fr 340px;min-height:calc(100vh - 126px);}
+  .stage{position:relative;display:flex;flex-direction:column;padding:20px;overflow:auto;}
+  .player-wrap{position:relative;width:100%;aspect-ratio:16/9;background:#000;border-radius:14px;overflow:hidden;box-shadow:var(--shadow-glow);border:1px solid var(--line);}
+  #player{width:100%;height:100%;}
+  .load-row{display:flex;gap:8px;margin-top:14px;}
+  .load-row input{flex:1;background:var(--ink-2);border:1px solid var(--line);color:var(--paper);padding:12px 14px;border-radius:10px;font-size:14px;outline:none;}
+  .load-row input:focus{border-color:var(--amber);}
+  .load-row button{width:auto;padding:12px 18px;font-size:14px;}
+  .reactions-bar{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap;}
+  .react-btn{background:var(--ink-2);border:1px solid var(--line);border-radius:999px;padding:9px 14px;font-size:18px;cursor:pointer;transition:transform .12s ease, background .2s;}
+  .react-btn:hover{background:#243456;transform:translateY(-2px);}
+  .react-btn:active{transform:scale(.9);}
+  .float-layer{position:absolute;inset:0;pointer-events:none;overflow:hidden;border-radius:14px;}
+  .float-emoji{position:absolute;bottom:10%;font-size:34px;animation:floatUp 2.6s ease-out forwards;filter:drop-shadow(0 4px 10px rgba(0,0,0,0.35));}
+  @keyframes floatUp{0%{transform:translateY(0) scale(.6) rotate(0deg);opacity:0;}12%{opacity:1;transform:translateY(-10px) scale(1) rotate(-4deg);}100%{transform:translateY(-260px) scale(1.05) rotate(6deg);opacity:0;}}
+  aside.chat{border-left:1px solid var(--line);display:flex;flex-direction:column;background:rgba(15,21,36,0.5);}
+  .chat-head{padding:16px 18px;border-bottom:1px solid var(--line);font-family:'Fraunces',serif;font-size:14px;color:rgba(243,237,226,0.7);display:flex;align-items:center;justify-content:space-between;}
+  .chat-log{flex:1;overflow-y:auto;padding:16px 18px;display:flex;flex-direction:column;gap:10px;max-height:calc(100vh - 260px);}
+  .msg{max-width:88%;font-size:14px;line-height:1.4;}
+  .msg .who{font-size:11px;color:rgba(243,237,226,0.4);margin-bottom:3px;letter-spacing:.02em;}
+  .msg .bubble{background:var(--ink-3);border:1px solid var(--line);padding:9px 13px;border-radius:14px 14px 14px 4px;word-break:break-word;}
+  .msg.me{align-self:flex-end;}
+  .msg.me .bubble{background:linear-gradient(180deg,#3a2c17,#2c2110);border-color:rgba(232,166,89,0.3);border-radius:14px 14px 4px 14px;}
+  .msg.system{align-self:center;font-size:12px;color:rgba(243,237,226,0.4);text-align:center;}
+  .msg.reaction .bubble{padding:6px 10px;font-size:16px;}
+  .chat-input-row{display:flex;gap:8px;padding:14px;border-top:1px solid var(--line);}
+  .chat-input-row input{flex:1;background:var(--ink-2);border:1px solid var(--line);color:var(--paper);padding:11px 14px;border-radius:10px;font-size:14px;outline:none;}
+  .chat-input-row input:focus{border-color:var(--amber);}
+  .send-btn{background:var(--amber);border:none;color:#1a1206;font-weight:700;width:42px;border-radius:10px;cursor:pointer;font-size:16px;}
+  .status-toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--ink-3);border:1px solid var(--line-2);padding:10px 18px;border-radius:999px;font-size:13px;display:flex;align-items:center;gap:8px;z-index:90;box-shadow:0 10px 30px rgba(0,0,0,0.4);}
+  .chat-toggle{display:none;}
+  @media (max-width:860px){
+    .layout{grid-template-columns:1fr;}
+    aside.chat{position:fixed;right:0;bottom:0;left:0;top:auto;height:70vh;border-left:none;border-top:1px solid var(--line-2);border-radius:18px 18px 0 0;transform:translateY(100%);transition:transform .25s ease;z-index:70;box-shadow:0 -10px 40px rgba(0,0,0,0.5);}
+    aside.chat.open{transform:translateY(0);}
+    .chat-toggle{display:flex;}
+    .stage{padding:14px;}
+    .nav-title{display:none;}
+  }
+
+  /* ---------- generic tab shell ---------- */
+  .tab-shell{max-width:760px;margin:0 auto;padding:32px 20px 90px;}
+
+  /* ---------- HOME ---------- */
+  .ring-card{display:flex;flex-direction:column;align-items:center;padding:34px 20px 10px;}
+  .ring-wrap{position:relative;width:220px;height:220px;}
+  .ring-wrap svg{width:100%;height:100%;transform:rotate(-90deg);}
+  .ring-bg{fill:none;stroke:var(--line-2);stroke-width:10;}
+  .ring-fg{fill:none;stroke:var(--amber);stroke-width:10;stroke-linecap:round;transition:stroke-dashoffset 1s ease;}
+  .ring-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;}
+  .ring-center .num{font-family:'Fraunces',serif;font-size:38px;color:var(--amber);line-height:1;}
+  .ring-center .lbl{font-size:12px;color:rgba(243,237,226,0.5);margin-top:4px;}
+  .ring-sub{margin-top:16px;font-size:13.5px;color:rgba(243,237,226,0.55);text-align:center;}
+  .home-cards{display:grid;grid-template-columns:1fr;gap:14px;margin-top:26px;}
+  .card{background:var(--ink-2);border:1px solid var(--line);border-radius:16px;padding:18px 20px;}
+  .card h3{margin:0 0 12px;font-size:14px;font-weight:600;color:rgba(243,237,226,0.75);display:flex;align-items:center;justify-content:space-between;}
+  .mood-row{display:flex;gap:8px;flex-wrap:wrap;}
+  .mood-btn{background:var(--ink-3);border:1px solid var(--line);border-radius:12px;padding:9px 11px;font-size:20px;cursor:pointer;transition:transform .12s,border-color .2s;}
+  .mood-btn:hover{transform:translateY(-2px);}
+  .mood-btn.selected{border-color:var(--amber);background:rgba(232,166,89,0.14);}
+  .partner-mood{margin-top:12px;font-size:13px;color:rgba(243,237,226,0.55);display:flex;align-items:center;gap:8px;}
+  .quick-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:26px;}
+  .quick-btn{
+    background:var(--ink-2);border:1px solid var(--line);border-radius:14px;padding:16px 8px;
+    display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;font-size:11.5px;
+    color:rgba(243,237,226,0.75);transition:background .2s,border-color .2s;text-align:center;
+  }
+  .quick-btn:hover{background:var(--ink-3);border-color:rgba(232,166,89,0.35);}
+  .quick-btn .qi{font-size:22px;}
+  @media (max-width:520px){.quick-grid{grid-template-columns:repeat(2,1fr);}}
+
+  /* ---------- MEMORIES ---------- */
+  .mem-add-btn{width:auto;padding:12px 20px;white-space:nowrap;}
+  .mem-card{background:var(--ink-2);border:1px solid var(--line);border-radius:16px;overflow:hidden;margin-bottom:18px;}
+  .mem-card img{width:100%;display:block;max-height:460px;object-fit:cover;background:#000;}
+  .mem-body{padding:16px 18px;}
+  .mem-text{font-size:15px;line-height:1.55;margin:0 0 10px;white-space:pre-wrap;}
+  .mem-meta{font-size:12px;color:rgba(243,237,226,0.4);display:flex;justify-content:space-between;}
+  .mem-meta .who{color:var(--amber);font-weight:600;}
+
+  /* ---------- MOOD TAB ---------- */
+  .cal-nav{display:flex;align-items:center;justify-content:space-between;margin:22px 0 12px;}
+  .cal-nav button{width:auto;padding:8px 14px;font-size:16px;}
+  .cal-title{font-family:'Fraunces',serif;font-size:16px;}
+  .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;}
+  .cal-dow{font-size:10.5px;text-align:center;color:rgba(243,237,226,0.35);text-transform:uppercase;letter-spacing:.06em;padding-bottom:4px;}
+  .cal-cell{
+    aspect-ratio:1;background:var(--ink-2);border:1px solid var(--line);border-radius:10px;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:11px;
+    color:rgba(243,237,226,0.4);position:relative;
+  }
+  .cal-cell.empty{background:transparent;border-color:transparent;}
+  .cal-cell .dnum{position:absolute;top:4px;left:6px;font-size:9px;}
+  .cal-cell .moods{display:flex;gap:2px;font-size:14px;margin-top:6px;}
+  .cal-legend{display:flex;gap:16px;justify-content:center;margin-top:18px;font-size:12px;color:rgba(243,237,226,0.5);}
+  .cal-legend span{display:flex;align-items:center;gap:6px;}
+  .dot{width:8px;height:8px;border-radius:50%;display:inline-block;}
+  .dot.you{background:var(--amber);}
+  .dot.partner{background:var(--rose);}
+
+  /* ---------- DRAW TAB ---------- */
+  .draw-toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px;}
+  .color-swatch{width:28px;height:28px;border-radius:50%;border:2px solid transparent;cursor:pointer;flex-shrink:0;}
+  .color-swatch.selected{border-color:var(--paper);transform:scale(1.12);}
+  .draw-toolbar .spacer{flex:1;}
+  .draw-toolbar select{background:var(--ink-2);border:1px solid var(--line);color:var(--paper);padding:8px 10px;border-radius:8px;font-size:13px;}
+  .canvas-wrap{width:100%;aspect-ratio:4/3;background:#fdfaf4;border-radius:16px;overflow:hidden;border:1px solid var(--line);box-shadow:var(--shadow-glow);touch-action:none;}
+  #drawCanvas{width:100%;height:100%;display:block;cursor:crosshair;}
+
+  /* ---------- PROFILE TAB ---------- */
+  .avatar-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;}
+  .avatar-opt{width:42px;height:42px;border-radius:50%;background:var(--ink-3);border:2px solid transparent;font-size:20px;display:flex;align-items:center;justify-content:center;cursor:pointer;}
+  .avatar-opt.selected{border-color:var(--amber);}
+  .palette-grid{display:flex;gap:12px;flex-wrap:wrap;}
+  .palette-swatch{width:56px;text-align:center;cursor:pointer;}
+  .palette-swatch .chip{width:56px;height:40px;border-radius:10px;border:2px solid transparent;overflow:hidden;display:flex;}
+  .palette-swatch .chip span{flex:1;}
+  .palette-swatch.selected .chip{border-color:var(--paper);}
+  .palette-swatch .plabel{font-size:10px;margin-top:6px;color:rgba(243,237,226,0.5);line-height:1.2;}
+  .ach-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px;}
+  .ach-card{background:var(--ink-2);border:1px solid var(--line);border-radius:14px;padding:16px 14px;text-align:center;}
+  .ach-card.locked{opacity:.4;}
+  .ach-card .aemoji{font-size:28px;margin-bottom:8px;}
+  .ach-card .alabel{font-size:12.5px;font-weight:600;}
+  .ach-card .asub{font-size:11px;color:rgba(243,237,226,0.45);margin-top:4px;}
+  .fb-status{display:flex;align-items:center;gap:8px;font-size:13px;color:rgba(243,237,226,0.55);margin-top:4px;}
+
+  /* ---------- MODALS ---------- */
+  .modal-overlay{display:none;position:fixed;inset:0;background:rgba(8,10,18,0.72);backdrop-filter:blur(4px);z-index:100;align-items:center;justify-content:center;padding:20px;}
+  .modal-overlay.open{display:flex;}
+  .modal-box{background:var(--ink-2);border:1px solid var(--line-2);border-radius:18px;padding:26px;width:100%;max-width:440px;max-height:88vh;overflow-y:auto;}
+  .modal-box h3{margin:0 0 6px;font-size:19px;font-weight:500;}
+  .modal-box p.desc{color:rgba(243,237,226,0.55);font-size:13.5px;line-height:1.5;margin:0 0 18px;}
+  .modal-actions{display:flex;gap:10px;margin-top:16px;}
+  .modal-actions .btn{width:auto;flex:1;padding:12px;font-size:14px;}
+  code.inline{background:var(--ink-3);padding:2px 6px;border-radius:5px;font-size:12px;}
+  ol.setup-steps{margin:0 0 16px;padding-left:20px;font-size:13.5px;line-height:1.7;color:rgba(243,237,226,0.7);}
+  .counter-detail{text-align:center;padding:10px 0 4px;}
+  .counter-detail .big{font-family:'Fraunces',serif;font-size:44px;color:var(--amber);line-height:1;margin-bottom:6px;}
+  .counter-detail .small{color:rgba(243,237,226,0.55);font-size:13.5px;}
+  input[type=file].name-input{padding:10px;}
+</style>
 </head>
 <body>
 
-<div id="login">
-  <h2>Вход</h2>
-  <input id="name" placeholder="ФИО">
-  <input id="password" type="password" placeholder="Пароль">
-  <button onclick="login()">Войти</button>
+<div id="topnav">
+  <div class="nav-left">
+    <span class="lamp lit" id="globalLamp"></span>
+    <span class="nav-title">Вместе</span>
+    <div class="nav-tabs">
+      <button class="nav-tab active" data-tab="home">🏠 Дом</button>
+      <button class="nav-tab" data-tab="watch">🎬 Смотрим</button>
+      <button class="nav-tab" data-tab="memories">📔 Лента</button>
+      <button class="nav-tab" data-tab="draw">🎨 Рисуем</button>
+      <button class="nav-tab" data-tab="mood">😊 Настроение</button>
+      <button class="nav-tab" data-tab="profile">👤 Профиль</button>
+    </div>
+  </div>
+  <div class="nav-right">
+    <div class="counter-pill" id="counterPill">💞 настроить</div>
+    <button class="icon-btn" id="settingsBtn" title="Настройки">⚙️</button>
+  </div>
 </div>
 
-<div id="app" style="display:none">
+<!-- ===================== HOME ===================== -->
+<div class="view active" id="homeTabView">
+  <div class="tab-shell">
+    <div class="ring-card">
+      <div class="ring-wrap">
+        <svg viewBox="0 0 220 220">
+          <circle class="ring-bg" cx="110" cy="110" r="98"></circle>
+          <circle class="ring-fg" id="ringFg" cx="110" cy="110" r="98" stroke-dasharray="616" stroke-dashoffset="616"></circle>
+        </svg>
+        <div class="ring-center">
+          <div class="num" id="homeBigNum">—</div>
+          <div class="lbl" id="homeBigLbl">дней вместе</div>
+        </div>
+      </div>
+      <div class="ring-sub" id="homeRingSub">Настрой дату начала отношений, чтобы запустить счётчик</div>
+    </div>
 
-  <h2>Добавление записи</h2>
+    <div class="home-cards">
+      <div class="card">
+        <h3>Настроение дня</h3>
+        <div class="mood-row" id="homeMoodRow"></div>
+        <div class="partner-mood" id="homePartnerMood"></div>
+      </div>
+    </div>
 
-  <input id="barcode" placeholder="ID студента" oninput="checkStudent()">
-  <div id="studentInfo"></div>
-
-  <div id="items"></div>
-
-  <button onclick="addEntry()">Добавить</button>
-
-  <h2>Отчёт</h2>
-  <ul id="report"></ul>
-
+    <div class="quick-grid">
+      <div class="quick-btn" data-goto="watch"><span class="qi">🎬</span>Смотрим кино</div>
+      <div class="quick-btn" data-goto="memories"><span class="qi">📔</span>Лента</div>
+      <div class="quick-btn" data-goto="draw"><span class="qi">🎨</span>Рисуем</div>
+      <div class="quick-btn" data-goto="mood"><span class="qi">😊</span>Настроение</div>
+    </div>
+  </div>
 </div>
 
-<script src="script.js"></script>
+<!-- ===================== WATCH ===================== -->
+<div class="view" id="watchTabView">
+  <div id="lobby">
+    <div class="lobby-card">
+      <div class="eyebrow"><span class="lamp" id="lobbyLamp"></span> вечер на двоих</div>
+      <h1>Смотрим вместе,<br>где бы вы ни были</h1>
+      <p class="sub">Личная комната для вас двоих — видео идёт в такт, рядом чат и реакции. Без регистрации, без чужих глаз.</p>
+      <input class="name-input" id="nameInput" placeholder="Как тебя называть в чате?" maxlength="20">
+      <div id="createBlock">
+        <button class="btn btn-primary" id="createBtn">Создать комнату</button>
+        <p class="hint">Сгенерируется ссылка и QR — скинь любым удобным способом.</p>
+      </div>
+      <div class="waiting-block" id="waitingBlock">
+        <div class="pulse-dots"><span></span><span></span><span></span></div>
+        <p style="color:rgba(243,237,226,.6);font-size:14px;margin:8px 0 0;">Ждём, пока она откроет ссылку…</p>
+        <div class="link-box"><input id="linkOutput" readonly><button class="btn" id="copyBtn">Скопировать</button></div>
+        <div class="qr-box"><img id="qrImg" width="140" height="140" alt="QR-код комнаты"></div>
+      </div>
+      <div class="link-block" id="joinBlock">
+        <div class="eyebrow" style="margin-top:26px;">приглашение получено</div>
+        <button class="btn btn-primary" id="joinBtn">Войти в комнату</button>
+      </div>
+      <div class="error-box" id="errorBox"></div>
+    </div>
+  </div>
 
+  <div id="room">
+    <header class="bar">
+      <div class="bar-left">
+        <span class="lamp lit" id="roomLamp"></span>
+        <span class="bar-title">Комната</span>
+        <div class="presence" id="presenceText">оба здесь</div>
+      </div>
+      <div class="bar-right">
+        <button class="icon-btn" id="shareBtn" title="Скопировать ссылку">🔗</button>
+        <button class="icon-btn chat-toggle" id="chatToggleBtn" title="Чат">💬</button>
+      </div>
+    </header>
+    <div class="layout">
+      <div class="stage">
+        <div class="player-wrap"><div id="player"></div><div class="float-layer" id="floatLayer"></div></div>
+        <div class="load-row"><input id="videoInput" placeholder="Вставь ссылку на YouTube-видео…"><button class="btn btn-primary" id="loadBtn">Включить</button></div>
+        <div class="reactions-bar" id="reactionsBar">
+          <button class="react-btn" data-emoji="❤️">❤️</button>
+          <button class="react-btn" data-emoji="🔥">🔥</button>
+          <button class="react-btn" data-emoji="😂">😂</button>
+          <button class="react-btn" data-emoji="😮">😮</button>
+          <button class="react-btn" data-emoji="🥹">🥹</button>
+          <button class="react-btn" data-emoji="👏">👏</button>
+        </div>
+      </div>
+      <aside class="chat" id="chatPanel">
+        <div class="chat-head"><span>Чат</span><span id="chatPeerName" style="color:rgba(243,237,226,.4);font-weight:400;"></span></div>
+        <div class="chat-log" id="chatLog"></div>
+        <div class="chat-input-row"><input id="chatInput" placeholder="Написать…" maxlength="500"><button class="send-btn" id="sendBtn">→</button></div>
+      </aside>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== MEMORIES ===================== -->
+<div class="view" id="memoriesTabView">
+  <div class="tab-shell">
+    <div class="section-head">
+      <div><h2>Лента воспоминаний</h2><p>То, что хочется сохранить — фото и пара слов о моменте.</p></div>
+      <button class="btn btn-primary mem-add-btn" id="memAddBtn">+ Добавить</button>
+    </div>
+    <div id="memList"></div>
+  </div>
+</div>
+
+<!-- ===================== DRAW ===================== -->
+<div class="view" id="drawTabView">
+  <div class="tab-shell">
+    <div class="section-head">
+      <div><h2>Рисуем вдвоём</h2><p>Общий холст — штрихи сохраняются и видны обеим, даже если зайти позже.</p></div>
+    </div>
+    <div class="draw-toolbar">
+      <div class="color-swatch selected" style="background:#2b2b2b" data-color="#2b2b2b"></div>
+      <div class="color-swatch" style="background:#e8899a" data-color="#e8899a"></div>
+      <div class="color-swatch" style="background:#e8a659" data-color="#e8a659"></div>
+      <div class="color-swatch" style="background:#7ecbd6" data-color="#7ecbd6"></div>
+      <div class="color-swatch" style="background:#8fae6d" data-color="#8fae6d"></div>
+      <div class="color-swatch" style="background:#9a8cf0" data-color="#9a8cf0"></div>
+      <select id="brushSize"><option value="2">Тонко</option><option value="4" selected>Средне</option><option value="9">Толсто</option></select>
+      <div class="spacer"></div>
+      <button class="icon-btn" id="clearDrawBtn" title="Очистить холст">🗑️</button>
+    </div>
+    <div class="canvas-wrap"><canvas id="drawCanvas"></canvas></div>
+    <p class="hint">Нужен Firebase (⚙️ в шапке), чтобы рисунок сохранялся и был виден на обоих устройствах.</p>
+  </div>
+</div>
+
+<!-- ===================== MOOD ===================== -->
+<div class="view" id="moodTabView">
+  <div class="tab-shell">
+    <div class="section-head">
+      <div><h2>Настроение</h2><p>Отмечайте, как прошёл день — у обеих сразу видно.</p></div>
+    </div>
+    <div class="card">
+      <h3>Сегодня</h3>
+      <div class="mood-row" id="moodTodayRow"></div>
+    </div>
+    <div class="cal-nav">
+      <button class="btn" id="calPrevBtn">← </button>
+      <div class="cal-title" id="calTitle">—</div>
+      <button class="btn" id="calNextBtn"> →</button>
+    </div>
+    <div class="cal-grid" id="calGrid"></div>
+    <div class="cal-legend"><span><span class="dot you"></span>ты</span><span><span class="dot partner"></span>партнёр</span></div>
+  </div>
+</div>
+
+<!-- ===================== PROFILE ===================== -->
+<div class="view" id="profileTabView">
+  <div class="tab-shell">
+    <div class="section-head"><div><h2>Профиль</h2><p>Имя, оформление и общие достижения.</p></div></div>
+
+    <div class="card">
+      <h3>Как тебя зовут</h3>
+      <input class="name-input" id="profileNameInput" placeholder="Имя" maxlength="20" style="margin-bottom:10px;">
+      <div class="avatar-row" id="avatarRow"></div>
+    </div>
+
+    <div class="card" style="margin-top:14px;">
+      <h3>Оформление</h3>
+      <div class="palette-grid" id="paletteGrid"></div>
+    </div>
+
+    <div class="card" style="margin-top:14px;">
+      <h3>Достижения</h3>
+      <div class="ach-grid" id="achGrid"></div>
+    </div>
+
+    <div class="card" style="margin-top:14px;">
+      <h3>Общее пространство</h3>
+      <div class="fb-status" id="fbStatusLine">⚙️ ещё не подключено</div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== MODALS ===================== -->
+<div class="modal-overlay" id="setupModal">
+  <div class="modal-box">
+    <h3>Подключить общее пространство</h3>
+    <p class="desc">Лента, настроение, рисунок и счётчик хранятся не у меня — а в вашем личном бесплатном Firebase-проекте. Займёт минут 5, один раз.</p>
+    <ol class="setup-steps">
+      <li>Зайди на <a href="https://console.firebase.google.com" target="_blank">console.firebase.google.com</a> → «Add project» → любое имя.</li>
+      <li>Слева: <b>Build → Firestore Database → Create database</b> → режим <b>test mode</b>.</li>
+      <li>Слева: <b>Build → Storage → Get started</b> → тоже test mode.</li>
+      <li>⚙️ → <b>Project settings</b> → «Your apps» → значок <code class="inline">&lt;/&gt;</code> (Web app) → зарегистрируй.</li>
+      <li>Появится блок <code class="inline">firebaseConfig</code> — скопируй целиком и вставь сюда:</li>
+    </ol>
+    <textarea class="name-input" id="fbConfigInput" rows="6" placeholder='const firebaseConfig = { apiKey: "...", authDomain: "...", ... };'></textarea>
+    <p class="hint" style="margin-top:0;">Через 30 дней тестовый режим Firestore/Storage истечёт. В Rules обеих секций поставь навсегда <code class="inline">allow read, write: if true;</code> и опубликуй. Правила открытые, поэтому просто не публикуй эту ссылку и конфиг никому, кроме своей половинки.</p>
+    <div class="modal-actions"><button class="btn" id="setupCancelBtn">Позже</button><button class="btn btn-primary" id="setupSaveBtn">Подключить</button></div>
+    <div class="error-box" id="setupError"></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="dateModal">
+  <div class="modal-box">
+    <h3>С какого дня вы вместе?</h3>
+    <p class="desc">Дата сохранится в общей базе — партнёр увидит тот же счётчик.</p>
+    <input class="name-input" id="dateInput" type="date">
+    <div class="modal-actions"><button class="btn" id="dateCancelBtn">Отмена</button><button class="btn btn-primary" id="dateSaveBtn">Сохранить</button></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="counterModal">
+  <div class="modal-box">
+    <h3 style="text-align:center;">Вы вместе уже…</h3>
+    <div class="counter-detail"><div class="big" id="counterBig">—</div><div class="small" id="counterSmall">—</div></div>
+    <div class="modal-actions"><button class="btn" id="counterEditBtn">Изменить дату</button><button class="btn btn-primary" id="counterCloseBtn">Закрыть</button></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="memModal">
+  <div class="modal-box">
+    <h3>Новое воспоминание</h3>
+    <p class="desc">Фото необязательно — можно оставить просто текст.</p>
+    <input class="name-input" id="memImageInput" type="file" accept="image/*">
+    <textarea class="name-input" id="memTextInput" rows="4" placeholder="О чём этот момент…"></textarea>
+    <div class="modal-actions"><button class="btn" id="memCancelBtn">Отмена</button><button class="btn btn-primary" id="memSaveBtn">Сохранить</button></div>
+    <div class="error-box" id="memError"></div>
+  </div>
+</div>
+
+<script>
+const $ = (sel) => document.querySelector(sel);
+const $$ = (sel) => Array.from(document.querySelectorAll(sel));
+
+/* ---------------- Person identity ---------------- */
+function uuid(){ return 'p-' + Math.random().toString(36).slice(2,10) + Date.now().toString(36); }
+let personId = localStorage.getItem('ut_personId');
+if(!personId){ personId = uuid(); localStorage.setItem('ut_personId', personId); }
+
+/* ---------------- Tabs ---------------- */
+const TAB_IDS = ['home','watch','memories','draw','mood','profile'];
+$$('.nav-tab').forEach(btn => btn.addEventListener('click', () => switchTab(btn.dataset.tab)));
+$$('.quick-btn').forEach(btn => btn.addEventListener('click', () => switchTab(btn.dataset.goto)));
+function switchTab(tab){
+  $$('.nav-tab').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+  TAB_IDS.forEach(t => $('#' + t + 'Tab' + (t==='watch'?'View':'View')));
+  $('#homeTabView').classList.toggle('active', tab==='home');
+  $('#watchTabView').classList.toggle('active', tab==='watch');
+  $('#memoriesTabView').classList.toggle('active', tab==='memories');
+  $('#drawTabView').classList.toggle('active', tab==='draw');
+  $('#moodTabView').classList.toggle('active', tab==='mood');
+  $('#profileTabView').classList.toggle('active', tab==='profile');
+  if((tab==='memories' || tab==='draw' || tab==='mood') && !fbReady){
+    openModal('setupModal');
+  }
+  if(tab==='memories' && fbReady) loadMemories();
+  if(tab==='draw' && fbReady) initDrawIfNeeded();
+  if(tab==='mood' && fbReady) renderCalendar();
+  if(tab==='profile') renderProfile();
+}
+
+/* ---------------- Modals ---------------- */
+function openModal(id){ $('#' + id).classList.add('open'); }
+function closeModal(id){ $('#' + id).classList.remove('open'); }
+$$('.modal-overlay').forEach(ov => ov.addEventListener('click', (e) => { if(e.target === ov) closeModal(ov.id); }));
+
+/* ---------------- Firebase setup ---------------- */
+let fbReady = false;
+let db = null, storage = null;
+
+$('#settingsBtn').onclick = () => openModal('setupModal');
+$('#setupCancelBtn').onclick = () => closeModal('setupModal');
+$('#setupSaveBtn').onclick = () => {
+  const raw = $('#fbConfigInput').value.trim();
+  const errEl = $('#setupError');
+  errEl.style.display = 'none';
+  if(!raw){ errEl.textContent = 'Вставь конфиг из Firebase.'; errEl.style.display='block'; return; }
+  try{
+    let cleaned = raw.replace(/^\s*(const|let|var)\s+firebaseConfig\s*=\s*/i, '').replace(/;\s*$/,'');
+    const cfg = new Function('return (' + cleaned + ')')();
+    if(!cfg.apiKey || !cfg.projectId) throw new Error('bad config');
+    localStorage.setItem('ut_fbConfig', JSON.stringify(cfg));
+    closeModal('setupModal');
+    initFirebase(cfg);
+  }catch(e){
+    errEl.textContent = 'Не смогла прочитать конфиг — проверь, что скопировала весь блок целиком.';
+    errEl.style.display = 'block';
+  }
+};
+function initFirebase(cfg){
+  try{
+    if(!firebase.apps.length) firebase.initializeApp(cfg);
+    db = firebase.firestore();
+    storage = firebase.storage();
+    fbReady = true;
+    $('#fbStatusLine').innerHTML = '<span class="lamp lit"></span> подключено · проект «' + cfg.projectId + '»';
+    watchRelationshipDoc();
+    watchTodayMoods();
+  }catch(e){ console.error(e); }
+}
+(function tryAutoInit(){
+  const saved = localStorage.getItem('ut_fbConfig');
+  if(saved){ try{ initFirebase(JSON.parse(saved)); }catch(e){} }
+})();
+
+/* ---------------- Relationship counter ---------------- */
+let relStartDate = null;
+$('#counterPill').onclick = () => {
+  if(!fbReady){ openModal('setupModal'); return; }
+  if(!relStartDate){ openModal('dateModal'); return; }
+  showCounterDetail(); openModal('counterModal');
+};
+$('#dateCancelBtn').onclick = () => closeModal('dateModal');
+$('#counterCloseBtn').onclick = () => closeModal('counterModal');
+$('#counterEditBtn').onclick = () => { closeModal('counterModal'); openModal('dateModal'); };
+$('#dateSaveBtn').onclick = () => {
+  const val = $('#dateInput').value;
+  if(!val) return;
+  db.collection('couple').doc('info').set({ startDate: val }, { merge:true });
+  closeModal('dateModal');
+};
+function watchRelationshipDoc(){
+  db.collection('couple').doc('info').onSnapshot((doc) => {
+    const data = doc.data();
+    if(data && data.startDate){ relStartDate = data.startDate; updateCounterPill(); updateHomeRing(); renderProfile(); }
+    else { $('#counterPill').textContent = '💞 указать дату'; }
+  });
+}
+function updateCounterPill(){ const days = daysSince(relStartDate); $('#counterPill').textContent = `💞 ${days} ${ruDays(days)}`; }
+function daysSince(dateStr){
+  const start = new Date(dateStr + 'T00:00:00'); const now = new Date();
+  return Math.max(0, Math.floor((now - start) / 86400000));
+}
+function ruDays(n){
+  const n10=n%10,n100=n%100;
+  if(n100>=11&&n100<=14) return 'дней';
+  if(n10===1) return 'день';
+  if(n10>=2&&n10<=4) return 'дня';
+  return 'дней';
+}
+function showCounterDetail(){
+  const start = new Date(relStartDate + 'T00:00:00'); const now = new Date();
+  let years = now.getFullYear()-start.getFullYear();
+  let months = now.getMonth()-start.getMonth();
+  let days = now.getDate()-start.getDate();
+  if(days<0){ months-=1; days += new Date(now.getFullYear(), now.getMonth(), 0).getDate(); }
+  if(months<0){ years-=1; months+=12; }
+  const totalDays = daysSince(relStartDate);
+  $('#counterBig').textContent = `${totalDays} ${ruDays(totalDays)}`;
+  const parts=[];
+  if(years) parts.push(`${years} ${years===1?'год':(years<5?'года':'лет')}`);
+  if(months) parts.push(`${months} ${months===1?'месяц':(months<5?'месяца':'месяцев')}`);
+  parts.push(`${days} ${ruDays(days)}`);
+  $('#counterSmall').textContent = 'то есть ' + parts.join(', ');
+}
+
+/* ---------------- Home ring + quick mood ---------------- */
+const RING_CIRC = 2*Math.PI*98;
+function updateHomeRing(){
+  if(!relStartDate){ $('#homeRingSub').textContent = 'Настрой дату начала отношений, чтобы запустить счётчик'; return; }
+  const total = daysSince(relStartDate);
+  $('#homeBigNum').textContent = total;
+  $('#homeBigLbl').textContent = ruDays(total) + ' вместе';
+  const progressInYear = (total % 365) / 365;
+  const offset = RING_CIRC * (1 - progressInYear);
+  $('#ringFg').style.strokeDasharray = RING_CIRC;
+  $('#ringFg').style.strokeDashoffset = offset;
+  const daysToNext = 365 - (total % 365);
+  $('#homeRingSub').textContent = `до следующей годовщины — ${daysToNext} ${ruDays(daysToNext)}`;
+}
+
+const MOODS = ['😊','🥰','😌','😴','🥳','😢','😤','🤒','😐','❤️‍🔥'];
+function buildMoodRow(container, onPick){
+  container.innerHTML = '';
+  MOODS.forEach(m => {
+    const b = document.createElement('button');
+    b.className = 'mood-btn'; b.textContent = m; b.dataset.mood = m;
+    b.onclick = () => onPick(m, b);
+    container.appendChild(b);
+  });
+}
+function todayStr(){ const d=new Date(); return d.toISOString().slice(0,10); }
+function saveMood(mood, btnGroup){
+  if(!fbReady){ openModal('setupModal'); return; }
+  const date = todayStr();
+  db.collection('moods').doc(personId + '_' + date).set({
+    date, mood, author: localStorage.getItem('ut_name') || 'Аноним', personId,
+    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+  }, { merge:true });
+  $$(btnGroup + ' .mood-btn').forEach(b => b.classList.toggle('selected', b.dataset.mood === mood));
+}
+buildMoodRow($('#homeMoodRow'), (m) => saveMood(m, '#homeMoodRow'));
+buildMoodRow($('#moodTodayRow'), (m) => saveMood(m, '#moodTodayRow'));
+
+let partnerTodayMood = null;
+function watchTodayMoods(){
+  db.collection('moods').where('date','==', todayStr()).onSnapshot((snap) => {
+    let mine = null;
+    snap.forEach(doc => {
+      const d = doc.data();
+      if(d.personId === personId){ mine = d.mood; }
+      else { partnerTodayMood = { mood:d.mood, author:d.author }; }
+    });
+    if(mine){
+      $$('#homeMoodRow .mood-btn, #moodTodayRow .mood-btn').forEach(b => b.classList.toggle('selected', b.dataset.mood===mine));
+    }
+    if(partnerTodayMood){
+      $('#homePartnerMood').innerHTML = `<span>${partnerTodayMood.mood}</span><span>${partnerTodayMood.author} сегодня чувствует именно так</span>`;
+    } else {
+      $('#homePartnerMood').textContent = 'партнёр ещё не отметил настроение сегодня';
+    }
+  });
+}
+
+/* ---------------- Mood calendar ---------------- */
+let calYear = new Date().getFullYear(), calMonth = new Date().getMonth();
+const MONTH_NAMES = ['январь','февраль','март','апрель','май','июнь','июль','август','сентябрь','октябрь','ноябрь','декабрь'];
+$('#calPrevBtn').onclick = () => { calMonth--; if(calMonth<0){calMonth=11;calYear--;} renderCalendar(); };
+$('#calNextBtn').onclick = () => { calMonth++; if(calMonth>11){calMonth=0;calYear++;} renderCalendar(); };
+function renderCalendar(){
+  if(!fbReady) return;
+  $('#calTitle').textContent = `${MONTH_NAMES[calMonth]} ${calYear}`;
+  const first = new Date(calYear, calMonth, 1);
+  const daysInMonth = new Date(calYear, calMonth+1, 0).getDate();
+  const startWeekday = (first.getDay() + 6) % 7; // Пн=0
+  const pad = (n) => String(n).padStart(2,'0');
+  const startStr = `${calYear}-${pad(calMonth+1)}-01`;
+  const endStr = `${calYear}-${pad(calMonth+1)}-${pad(daysInMonth)}`;
+  db.collection('moods').where('date','>=',startStr).where('date','<=',endStr).get().then(snap => {
+    const byDay = {};
+    snap.forEach(doc => {
+      const d = doc.data();
+      byDay[d.date] = byDay[d.date] || {};
+      byDay[d.date][d.personId===personId ? 'you' : 'partner'] = d.mood;
+    });
+    const grid = $('#calGrid'); grid.innerHTML = '';
+    ['пн','вт','ср','чт','пт','сб','вс'].forEach(d => { const el=document.createElement('div'); el.className='cal-dow'; el.textContent=d; grid.appendChild(el); });
+    for(let i=0;i<startWeekday;i++){ const el=document.createElement('div'); el.className='cal-cell empty'; grid.appendChild(el); }
+    for(let day=1; day<=daysInMonth; day++){
+      const dateStr = `${calYear}-${pad(calMonth+1)}-${pad(day)}`;
+      const cell = document.createElement('div'); cell.className='cal-cell';
+      const rec = byDay[dateStr] || {};
+      cell.innerHTML = `<span class="dnum">${day}</span><span class="moods">${rec.you||''}${rec.partner||''}</span>`;
+      grid.appendChild(cell);
+    }
+  });
+}
+
+/* ---------------- Memories feed ---------------- */
+let memUnsub = null;
+$('#memAddBtn').onclick = () => {
+  if(!fbReady){ openModal('setupModal'); return; }
+  $('#memImageInput').value=''; $('#memTextInput').value=''; $('#memError').style.display='none';
+  openModal('memModal');
+};
+$('#memCancelBtn').onclick = () => closeModal('memModal');
+$('#memSaveBtn').onclick = async () => {
+  const text = $('#memTextInput').value.trim();
+  const file = $('#memImageInput').files[0];
+  const errEl = $('#memError');
+  if(!text && !file){ errEl.textContent='Добавь фото или пару слов.'; errEl.style.display='block'; return; }
+  $('#memSaveBtn').textContent='Сохраняю…'; $('#memSaveBtn').disabled=true;
+  try{
+    let imageURL = null;
+    if(file){
+      const path = `memories/${Date.now()}_${file.name}`;
+      const ref = storage.ref(path);
+      await ref.put(file);
+      imageURL = await ref.getDownloadURL();
+    }
+    await db.collection('memories').add({
+      text: text||'', imageURL, author: localStorage.getItem('ut_name')||'Аноним',
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    closeModal('memModal');
+  }catch(e){
+    console.error(e);
+    errEl.textContent='Не получилось сохранить. Проверь Rules в Firestore/Storage (⚙️).';
+    errEl.style.display='block';
+  }finally{ $('#memSaveBtn').textContent='Сохранить'; $('#memSaveBtn').disabled=false; }
+};
+function loadMemories(){
+  if(memUnsub) return;
+  memUnsub = db.collection('memories').orderBy('createdAt','desc').onSnapshot((snap) => {
+    const list = $('#memList');
+    if(snap.empty){ list.innerHTML = '<div class="empty-state">Пока пусто — самое время сохранить первый момент 🕯️</div>'; return; }
+    list.innerHTML = '';
+    snap.forEach(doc => {
+      const d = doc.data();
+      const card = document.createElement('div'); card.className='mem-card';
+      const dateStr = d.createdAt && d.createdAt.toDate ? d.createdAt.toDate().toLocaleDateString('ru-RU',{day:'numeric',month:'long',year:'numeric'}) : '';
+      card.innerHTML = `${d.imageURL?`<img src="${d.imageURL}" loading="lazy">`:''}
+        <div class="mem-body">${d.text?'<p class="mem-text"></p>':''}<div class="mem-meta"><span class="who"></span><span></span></div></div>`;
+      if(d.text) card.querySelector('.mem-text').textContent = d.text;
+      card.querySelector('.who').textContent = d.author||'Аноним';
+      card.querySelector('.mem-meta span:last-child').textContent = dateStr;
+      list.appendChild(card);
+    });
+  });
+}
+
+/* ---------------- Draw together ---------------- */
+let drawInited = false, drawCtx = null, drawColor = '#2b2b2b', drawWidth = 4;
+let isDrawing = false, currentStroke = [];
+let strokesUnsub = null;
+function initDrawIfNeeded(){
+  if(drawInited) return;
+  drawInited = true;
+  const canvas = $('#drawCanvas');
+  function resize(){
+    const rect = canvas.getBoundingClientRect();
+    canvas.width = rect.width * 2; canvas.height = rect.height * 2;
+    drawCtx = canvas.getContext('2d');
+    drawCtx.scale(2,2); drawCtx.lineCap='round'; drawCtx.lineJoin='round';
+    redrawAllStrokes();
+  }
+  window.addEventListener('resize', resize);
+  resize();
+
+  function posFromEvent(e){
+    const rect = canvas.getBoundingClientRect();
+    const cx = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
+    const cy = (e.touches ? e.touches[0].clientY : e.clientY) - rect.top;
+    return { x: cx/rect.width, y: cy/rect.height };
+  }
+  function start(e){ e.preventDefault(); isDrawing = true; currentStroke = [posFromEvent(e)]; }
+  function move(e){
+    if(!isDrawing) return; e.preventDefault();
+    const p = posFromEvent(e); currentStroke.push(p);
+    drawSegmentLocal(currentStroke[currentStroke.length-2], p, drawColor, drawWidth);
+  }
+  function end(){
+    if(!isDrawing) return; isDrawing = false;
+    if(currentStroke.length > 1 && fbReady){
+      db.collection('strokes').add({ points: currentStroke, color: drawColor, width: drawWidth, author: localStorage.getItem('ut_name')||'Аноним', createdAt: firebase.firestore.FieldValue.serverTimestamp() });
+    }
+    currentStroke = [];
+  }
+  canvas.addEventListener('mousedown', start);
+  canvas.addEventListener('mousemove', move);
+  window.addEventListener('mouseup', end);
+  canvas.addEventListener('touchstart', start, {passive:false});
+  canvas.addEventListener('touchmove', move, {passive:false});
+  canvas.addEventListener('touchend', end);
+
+  $$('.color-swatch').forEach(sw => sw.addEventListener('click', () => {
+    $$('.color-swatch').forEach(s => s.classList.remove('selected'));
+    sw.classList.add('selected'); drawColor = sw.dataset.color;
+  }));
+  $('#brushSize').addEventListener('change', (e) => drawWidth = Number(e.target.value));
+  $('#clearDrawBtn').addEventListener('click', async () => {
+    if(!fbReady) return;
+    if(!confirm('Стереть весь рисунок насовсем?')) return;
+    const snap = await db.collection('strokes').get();
+    const batchDeletes = [];
+    snap.forEach(doc => batchDeletes.push(doc.ref.delete()));
+    await Promise.all(batchDeletes);
+    drawCtx.clearRect(0,0,canvas.width,canvas.height);
+  });
+
+  if(fbReady) subscribeStrokes();
+}
+function drawSegmentLocal(p1, p2, color, width){
+  if(!drawCtx || !p1 || !p2) return;
+  const canvas = $('#drawCanvas');
+  const rect = canvas.getBoundingClientRect();
+  drawCtx.strokeStyle = color; drawCtx.lineWidth = width;
+  drawCtx.beginPath();
+  drawCtx.moveTo(p1.x*rect.width, p1.y*rect.height);
+  drawCtx.lineTo(p2.x*rect.width, p2.y*rect.height);
+  drawCtx.stroke();
+}
+function drawFullStroke(stroke){
+  for(let i=1;i<stroke.points.length;i++) drawSegmentLocal(stroke.points[i-1], stroke.points[i], stroke.color, stroke.width);
+}
+function redrawAllStrokes(){
+  if(!fbReady || !db) return;
+  db.collection('strokes').orderBy('createdAt','asc').get().then(snap => {
+    drawCtx.clearRect(0,0,$('#drawCanvas').width,$('#drawCanvas').height);
+    snap.forEach(doc => drawFullStroke(doc.data()));
+  });
+}
+function subscribeStrokes(){
+  if(strokesUnsub) return;
+  strokesUnsub = db.collection('strokes').orderBy('createdAt','asc').onSnapshot((snap) => {
+    snap.docChanges().forEach(change => { if(change.type==='added') drawFullStroke(change.doc.data()); });
+  });
+  redrawAllStrokes();
+}
+
+/* ---------------- Profile: name / avatar / palette / achievements ---------------- */
+const AVATARS = ['🐣','🦊','🐻','🐼','🐰','🦋','🌙','🌸'];
+function renderAvatarRow(){
+  const saved = localStorage.getItem('ut_avatar') || AVATARS[0];
+  const row = $('#avatarRow'); row.innerHTML='';
+  AVATARS.forEach(a => {
+    const b = document.createElement('div'); b.className='avatar-opt'+(a===saved?' selected':''); b.textContent=a;
+    b.onclick = () => { localStorage.setItem('ut_avatar', a); renderAvatarRow(); };
+    row.appendChild(b);
+  });
+}
+$('#profileNameInput').addEventListener('change', (e) => {
+  const v = e.target.value.trim();
+  localStorage.setItem('ut_name', v);
+  $('#nameInput').value = v;
+});
+
+const PALETTES = [
+  { key:'bay', name:'Полночный залив', vars:{'--ink':'#0f1524','--ink-2':'#161f34','--ink-3':'#1e2a45','--paper':'#f3ede2','--amber':'#e8a659','--amber-dim':'#8a6a3c','--rose':'#e8899a'} },
+  { key:'cherry', name:'Вишнёвый бархат', vars:{'--ink':'#1c0f16','--ink-2':'#28151f','--ink-3':'#341b29','--paper':'#f5e8e2','--amber':'#d8637f','--amber-dim':'#7a3a49','--rose':'#e0a15c'} },
+  { key:'pine', name:'Хвойная ночь', vars:{'--ink':'#0c1712','--ink-2':'#13221b','--ink-3':'#1a2e24','--paper':'#eef2ea','--amber':'#8fae6d','--amber-dim':'#54683f','--rose':'#d9a15c'} },
+  { key:'storm', name:'Грозовой залив', vars:{'--ink':'#111426','--ink-2':'#181c34','--ink-3':'#212747','--paper':'#eceaf7','--amber':'#9a8cf0','--amber-dim':'#5c52a0','--rose':'#7ecbd6'} },
+  { key:'peach', name:'Персиковый закат', vars:{'--ink':'#1f1218','--ink-2':'#2b1a22','--ink-3':'#38222d','--paper':'#fbeee0','--amber':'#f0916a','--amber-dim':'#a15a41','--rose':'#f0c363'} },
+  { key:'silver', name:'Серебряная зима', vars:{'--ink':'#12161c','--ink-2':'#1a2028','--ink-3':'#232b36','--paper':'#eef1f4','--amber':'#8fb8d6','--amber-dim':'#4f7590','--rose':'#c9a4d8'} }
+];
+function applyPalette(key){
+  const p = PALETTES.find(x=>x.key===key) || PALETTES[0];
+  Object.entries(p.vars).forEach(([k,v]) => document.documentElement.style.setProperty(k,v));
+  localStorage.setItem('ut_palette', key);
+  renderPaletteGrid();
+}
+function renderPaletteGrid(){
+  const saved = localStorage.getItem('ut_palette') || 'bay';
+  const grid = $('#paletteGrid'); grid.innerHTML='';
+  PALETTES.forEach(p => {
+    const wrap = document.createElement('div'); wrap.className='palette-swatch'+(p.key===saved?' selected':'');
+    wrap.innerHTML = `<div class="chip"><span style="background:${p.vars['--ink']}"></span><span style="background:${p.vars['--amber']}"></span><span style="background:${p.vars['--rose']}"></span></div><div class="plabel">${p.name}</div>`;
+    wrap.onclick = () => applyPalette(p.key);
+    grid.appendChild(wrap);
+  });
+}
+
+const MILESTONES = [
+  {days:7,label:'Неделя вместе',emoji:'🌱'},{days:30,label:'Первый месяц',emoji:'🌿'},
+  {days:100,label:'100 дней',emoji:'💯'},{days:180,label:'Полгода',emoji:'🌸'},
+  {days:365,label:'Год вместе',emoji:'🎂'},{days:500,label:'500 дней',emoji:'✨'},
+  {days:730,label:'Два года',emoji:'💍'},{days:1000,label:'1000 дней',emoji:'👑'}
+];
+function renderAchievements(){
+  const grid = $('#achGrid'); grid.innerHTML='';
+  const total = relStartDate ? daysSince(relStartDate) : 0;
+  MILESTONES.forEach(m => {
+    const unlocked = relStartDate && total >= m.days;
+    const card = document.createElement('div'); card.className='ach-card'+(unlocked?'':' locked');
+    card.innerHTML = `<div class="aemoji">${m.emoji}</div><div class="alabel">${m.label}</div><div class="asub">${unlocked ? 'открыто' : (relStartDate ? `через ${m.days-total} ${ruDays(m.days-total)}` : 'нужна дата начала')}</div>`;
+    grid.appendChild(card);
+  });
+}
+function renderProfile(){
+  const savedName = localStorage.getItem('ut_name') || '';
+  $('#profileNameInput').value = savedName;
+  renderAvatarRow();
+  renderPaletteGrid();
+  renderAchievements();
+}
+(function initPaletteOnLoad(){
+  const saved = localStorage.getItem('ut_palette');
+  if(saved) applyPalette(saved);
+})();
+
+/* =========================================================
+   ---- СИНХРОННЫЙ ПРОСМОТР (P2P, PeerJS) — как раньше ----
+========================================================= */
+const WORDS_A = ["тихий","тёплый","дальний","ночной","мягкий","янтарный","солнечный","ясный","близкий","снежный"];
+const WORDS_B = ["сад","берег","маяк","дом","город","мост","лес","огонёк","путь","остров"];
+function friendlyRoomId(){
+  const a = WORDS_A[Math.floor(Math.random()*WORDS_A.length)];
+  const b = WORDS_B[Math.floor(Math.random()*WORDS_B.length)];
+  const n = Math.floor(Math.random()*90+10);
+  return `${a}-${b}-${n}`;
+}
+let myName=""; let peer=null; let conn=null; let isHost=false;
+let player=null; let ytReady=false; let pendingVideoId=null; let suppressUntil=0; let driftTimer=null;
+const params = new URLSearchParams(location.search);
+const roomParam = params.get("room");
+
+window.onYouTubeIframeAPIReady = function(){
+  ytReady = true;
+  player = new YT.Player('player', {
+    height:'100%', width:'100%', playerVars:{ rel:0, modestbranding:1, playsinline:1 },
+    events:{ onReady: () => { if(pendingVideoId){ player.cueVideoById(pendingVideoId); pendingVideoId=null; } }, onStateChange: onPlayerStateChange }
+  });
+};
+(function loadYT(){ const tag=document.createElement('script'); tag.src="https://www.youtube.com/iframe_api"; document.head.appendChild(tag); })();
+
+function onPlayerStateChange(e){
+  if(Date.now() < suppressUntil) return;
+  if(!conn || !conn.open) return;
+  if(e.data === YT.PlayerState.PLAYING) send({type:'state', state:'play', time: player.getCurrentTime()});
+  else if(e.data === YT.PlayerState.PAUSED) send({type:'state', state:'pause', time: player.getCurrentTime()});
+}
+function extractVideoId(input){
+  input = input.trim();
+  if(/^[a-zA-Z0-9_-]{11}$/.test(input)) return input;
+  const m = input.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/live\/|youtube\.com\/embed\/|youtube\.com\/shorts\/)([a-zA-Z0-9_-]{11})/);
+  return m ? m[1] : null;
+}
+const errorBox = $('#errorBox');
+function showError(msg){ errorBox.textContent=msg; errorBox.style.display='block'; }
+
+if(roomParam){
+  $('#createBlock').style.display='none'; $('#joinBlock').style.display='block';
+  $('#joinBtn').onclick = () => { myName=($('#nameInput').value||'Гость').trim(); localStorage.setItem('ut_name',myName); startAsGuest(roomParam); };
+} else {
+  $('#createBtn').onclick = () => { myName=($('#nameInput').value||'Хозяин').trim(); localStorage.setItem('ut_name',myName); startAsHost(); };
+}
+$('#copyBtn').onclick = () => { navigator.clipboard.writeText($('#linkOutput').value); $('#copyBtn').textContent='Готово ✓'; setTimeout(()=>$('#copyBtn').textContent='Скопировать',1500); };
+
+function startAsHost(){
+  isHost = true;
+  const roomId = friendlyRoomId();
+  $('#createBlock').style.display='none'; $('#waitingBlock').style.display='block'; $('#lobbyLamp').classList.add('lit');
+  peer = new Peer(roomId, { debug: 1 });
+  peer.on('open', (id) => {
+    const link = `${location.origin}${location.pathname}?room=${id}`;
+    $('#linkOutput').value = link;
+    $('#qrImg').src = 'https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=' + encodeURIComponent(link);
+  });
+  peer.on('connection', (c) => { conn=c; wireConnection(); });
+  peer.on('error', (err) => {
+    console.error(err);
+    if(err.type==='unavailable-id') startAsHost();
+    else showError('Не получилось создать комнату: '+err.type+'. Проверь интернет-соединение и попробуй ещё раз.');
+  });
+}
+function startAsGuest(roomId){
+  isHost = false;
+  $('#joinBlock').style.display='none'; $('#waitingBlock').style.display='block';
+  $('#waitingBlock').querySelector('p').textContent='Подключаемся…';
+  $('#lobbyLamp').classList.add('lit');
+  peer = new Peer({ debug: 1 });
+  peer.on('open', () => {
+    conn = peer.connect(roomId, { reliable:true });
+    conn.on('open', () => wireConnection());
+    conn.on('error', () => showError('Комната не найдена. Проверь, что ссылка верная и хозяин комнаты уже открыл её.'));
+  });
+  peer.on('error', (err) => {
+    console.error(err);
+    if(err.type==='peer-unavailable') showError('Комната ещё не создана или уже закрыта. Попроси прислать свежую ссылку.');
+    else showError('Не получилось подключиться: '+err.type);
+  });
+}
+function wireConnection(){
+  enterRoom();
+  conn.on('data', handleData); conn.on('close', onPeerLeft); conn.on('error', onPeerLeft);
+  send({type:'hello', name: myName}); setPresence(true);
+  if(isHost){
+    driftTimer = setInterval(() => {
+      if(player && player.getPlayerState && player.getPlayerState()===1) send({type:'ping', time: player.getCurrentTime()});
+    }, 5000);
+  }
+}
+function enterRoom(){ $('#lobby').style.display='none'; $('#room').classList.add('active'); }
+function onPeerLeft(){ setPresence(false); toast('Партнёр отключился — ссылка всё ещё активна, комната ждёт 🕯️'); }
+function setPresence(online){
+  $('#roomLamp').classList.toggle('lit', online);
+  $('#globalLamp').classList.toggle('lit', online);
+  $('#presenceText').textContent = online ? 'оба здесь' : 'ты один сейчас';
+}
+function send(obj){ if(conn && conn.open) conn.send(obj); }
+let partnerName='она';
+function handleData(msg){
+  switch(msg.type){
+    case 'hello': partnerName=msg.name||'партнёр'; $('#chatPeerName').textContent='с '+partnerName; addSystemMsg(`${partnerName} в комнате 🕯️`); setPresence(true); break;
+    case 'load': applyRemoteLoad(msg.videoId); break;
+    case 'state': applyRemoteState(msg.state, msg.time); break;
+    case 'ping': correctDrift(msg.time); break;
+    case 'chat': addChatMsg(msg.text, false); break;
+    case 'reaction': spawnFloatEmoji(msg.emoji); addReactionMsg(msg.emoji, false); break;
+  }
+}
+function applyRemoteLoad(videoId){
+  suppressUntil = Date.now()+1200;
+  if(ytReady && player && player.loadVideoById) player.loadVideoById(videoId); else pendingVideoId=videoId;
+  addSystemMsg('Включили новое видео');
+}
+function applyRemoteState(state, time){
+  if(!player || !player.getCurrentTime) return;
+  suppressUntil = Date.now()+900;
+  const localTime = player.getCurrentTime ? player.getCurrentTime() : 0;
+  if(Math.abs(localTime-time) > 1.2) player.seekTo(time, true);
+  if(state==='play') player.playVideo(); if(state==='pause') player.pauseVideo();
+}
+function correctDrift(remoteTime){
+  if(!player || !player.getCurrentTime || !player.getPlayerState) return;
+  if(player.getPlayerState()!==1) return;
+  const local = player.getCurrentTime();
+  if(Math.abs(local-remoteTime) > 1.5){ suppressUntil = Date.now()+900; player.seekTo(remoteTime, true); }
+}
+$('#loadBtn').onclick = loadVideo;
+$('#videoInput').addEventListener('keydown', (e) => { if(e.key==='Enter') loadVideo(); });
+function loadVideo(){
+  const raw = $('#videoInput').value; const id = extractVideoId(raw);
+  if(!id){ toast('Не нашла видео в этой ссылке 🤔'); return; }
+  suppressUntil = Date.now()+1200;
+  if(ytReady && player && player.loadVideoById) player.loadVideoById(id); else pendingVideoId=id;
+  send({type:'load', videoId:id}); $('#videoInput').value='';
+}
+const chatLog = $('#chatLog');
+function addChatMsg(text, mine){
+  const el=document.createElement('div'); el.className='msg'+(mine?' me':'');
+  el.innerHTML=`<div class="who">${mine?'ты':partnerName}</div><div class="bubble"></div>`;
+  el.querySelector('.bubble').textContent=text; chatLog.appendChild(el); chatLog.scrollTop=chatLog.scrollHeight;
+}
+function addReactionMsg(emoji, mine){
+  const el=document.createElement('div'); el.className='msg reaction'+(mine?' me':'');
+  el.innerHTML=`<div class="bubble">${emoji}</div>`; chatLog.appendChild(el); chatLog.scrollTop=chatLog.scrollHeight;
+}
+function addSystemMsg(text){
+  const el=document.createElement('div'); el.className='msg system'; el.textContent=text;
+  chatLog.appendChild(el); chatLog.scrollTop=chatLog.scrollHeight;
+}
+$('#sendBtn').onclick = sendChat;
+$('#chatInput').addEventListener('keydown', (e) => { if(e.key==='Enter') sendChat(); });
+function sendChat(){
+  const val = $('#chatInput').value.trim(); if(!val) return;
+  addChatMsg(val, true); send({type:'chat', text:val}); $('#chatInput').value='';
+}
+$$('.react-btn').forEach(btn => btn.addEventListener('click', () => {
+  const emoji = btn.dataset.emoji; spawnFloatEmoji(emoji); addReactionMsg(emoji, true); send({type:'reaction', emoji});
+}));
+function spawnFloatEmoji(emoji){
+  const layer = $('#floatLayer'); const el=document.createElement('div'); el.className='float-emoji'; el.textContent=emoji;
+  el.style.left=(10+Math.random()*80)+'%'; layer.appendChild(el); setTimeout(()=>el.remove(),2700);
+}
+$('#shareBtn').onclick = () => { navigator.clipboard.writeText(location.href.split('?')[0]+'?room='+(peer?peer.id:'')); toast('Ссылка скопирована 🔗'); };
+$('#chatToggleBtn').onclick = () => $('#chatPanel').classList.toggle('open');
+let toastTimer=null;
+function toast(msg){
+  let el=document.getElementById('toastEl');
+  if(!el){ el=document.createElement('div'); el.id='toastEl'; el.className='status-toast'; document.body.appendChild(el); }
+  el.textContent=msg; el.style.display='flex'; clearTimeout(toastTimer); toastTimer=setTimeout(()=>el.style.display='none',3200);
+}
+
+/* init name field from storage */
+const storedName = localStorage.getItem('ut_name');
+if(storedName) $('#nameInput').value = storedName;
+</script>
 </body>
 </html>
