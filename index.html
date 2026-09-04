@@ -303,6 +303,7 @@
       <button class="nav-tab" data-tab="memories">📔 Лента</button>
       <button class="nav-tab" data-tab="draw">🎨 Рисуем</button>
       <button class="nav-tab" data-tab="mood">😊 Настроение</button>
+      <button class="nav-tab" data-tab="intimacy">🔥 Близость</button>
       <button class="nav-tab" data-tab="profile">👤 Профиль</button>
     </div>
   </div>
@@ -459,6 +460,23 @@
   </div>
 </div>
 
+<!-- ===================== INTIMACY ===================== -->
+<div class="view" id="intimacyTabView">
+  <div class="tab-shell">
+    <div class="section-head">
+      <div><h2>Близость</h2><p>Личный календарь — виден только вам двоим.</p></div>
+      <button class="btn btn-primary mem-add-btn" id="intimacyAddBtn">+ Запись</button>
+    </div>
+    <div class="cal-nav">
+      <button class="btn" id="intCalPrevBtn">← </button>
+      <div class="cal-title" id="intCalTitle">—</div>
+      <button class="btn" id="intCalNextBtn"> →</button>
+    </div>
+    <div class="cal-grid" id="intCalGrid"></div>
+    <div id="intimacyList" style="margin-top:26px;"></div>
+  </div>
+</div>
+
 <!-- ===================== PROFILE ===================== -->
 <div class="view" id="profileTabView">
   <div class="tab-shell">
@@ -530,6 +548,41 @@
     <textarea class="name-input" id="memTextInput" rows="4" placeholder="О чём этот момент…"></textarea>
     <div class="modal-actions"><button class="btn" id="memCancelBtn">Отмена</button><button class="btn btn-primary" id="memSaveBtn">Сохранить</button></div>
     <div class="error-box" id="memError"></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="intimacyModal">
+  <div class="modal-box">
+    <h3>Новая запись</h3>
+    <p class="desc">Видно только вам двоим в этой базе.</p>
+    <input class="name-input" id="intDateInput" type="date">
+    <input class="name-input" id="intDurationInput" type="number" min="0" placeholder="Продолжительность, мин">
+    <select class="name-input" id="intTypeInput">
+      <option value="">Вид — не указан</option>
+      <option value="Классический">Классический</option>
+      <option value="Оральный">Оральный</option>
+      <option value="Анальный">Анальный</option>
+      <option value="Другое">Другое</option>
+    </select>
+    <select class="name-input" id="intProtectionInput">
+      <option value="">Защита — не указана</option>
+      <option value="Без защиты">Без защиты</option>
+      <option value="Презерватив">Презерватив</option>
+      <option value="Гормональная контрацепция">Гормональная контрацепция</option>
+      <option value="Другое">Другое</option>
+    </select>
+    <div style="margin-bottom:12px;">
+      <div class="hint" style="margin:0 0 8px;">Оргазм</div>
+      <div class="mood-row" id="intOrgasmRow">
+        <button class="mood-btn" data-val="me" style="font-size:13px;">Я</button>
+        <button class="mood-btn" data-val="partner" style="font-size:13px;">Партнёр</button>
+        <button class="mood-btn" data-val="both" style="font-size:13px;">Оба</button>
+        <button class="mood-btn" data-val="none" style="font-size:13px;">Никто</button>
+      </div>
+    </div>
+    <textarea class="name-input" id="intNotesInput" rows="3" placeholder="Заметки…"></textarea>
+    <div class="modal-actions"><button class="btn" id="intCancelBtn">Отмена</button><button class="btn btn-primary" id="intSaveBtn">Сохранить</button></div>
+    <div class="error-box" id="intError"></div>
   </div>
 </div>
 
@@ -615,13 +668,15 @@ function switchTab(tab){
   $('#memoriesTabView').classList.toggle('active', tab==='memories');
   $('#drawTabView').classList.toggle('active', tab==='draw');
   $('#moodTabView').classList.toggle('active', tab==='mood');
+  $('#intimacyTabView').classList.toggle('active', tab==='intimacy');
   $('#profileTabView').classList.toggle('active', tab==='profile');
-  if((tab==='memories' || tab==='draw' || tab==='mood') && !fbReady){
+  if((tab==='memories' || tab==='draw' || tab==='mood' || tab==='intimacy') && !fbReady){
     openModal('setupModal');
   }
   if(tab==='memories' && fbReady) loadMemories();
   if(tab==='draw' && fbReady) initDrawIfNeeded();
   if(tab==='mood' && fbReady) renderCalendar();
+  if(tab==='intimacy' && fbReady) renderIntimacyCalendar();
   if(tab==='profile') renderProfile();
 }
 
@@ -811,6 +866,108 @@ function renderCalendar(){
       grid.appendChild(cell);
     }
   });
+}
+
+/* ---------------- Intimacy calendar & log ---------------- */
+let intCalYear = new Date().getFullYear(), intCalMonth = new Date().getMonth();
+let intUnsub = null;
+let intSelectedOrgasm = null;
+$('#intCalPrevBtn').onclick = () => { intCalMonth--; if(intCalMonth<0){intCalMonth=11;intCalYear--;} renderIntimacyCalendar(); };
+$('#intCalNextBtn').onclick = () => { intCalMonth++; if(intCalMonth>11){intCalMonth=0;intCalYear++;} renderIntimacyCalendar(); };
+
+$('#intimacyAddBtn').onclick = () => {
+  if(!fbReady){ openModal('setupModal'); return; }
+  $('#intDateInput').value = todayStr();
+  $('#intDurationInput').value = '';
+  $('#intTypeInput').value = '';
+  $('#intProtectionInput').value = '';
+  $('#intNotesInput').value = '';
+  intSelectedOrgasm = null;
+  $$('#intOrgasmRow .mood-btn').forEach(b => b.classList.remove('selected'));
+  $('#intError').style.display = 'none';
+  openModal('intimacyModal');
+};
+$('#intCancelBtn').onclick = () => closeModal('intimacyModal');
+$$('#intOrgasmRow .mood-btn').forEach(b => b.addEventListener('click', () => {
+  intSelectedOrgasm = b.dataset.val;
+  $$('#intOrgasmRow .mood-btn').forEach(x => x.classList.toggle('selected', x===b));
+}));
+$('#intSaveBtn').onclick = () => {
+  const date = $('#intDateInput').value || todayStr();
+  const errEl = $('#intError');
+  $('#intSaveBtn').textContent = 'Сохраняю…'; $('#intSaveBtn').disabled = true;
+  db.collection('intimacy').add({
+    date,
+    duration: Number($('#intDurationInput').value) || null,
+    type: $('#intTypeInput').value || null,
+    protection: $('#intProtectionInput').value || null,
+    orgasm: intSelectedOrgasm,
+    notes: $('#intNotesInput').value.trim() || '',
+    authorId: personId,
+    author: localStorage.getItem('ut_name') || 'Аноним',
+    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+  }).then(() => { closeModal('intimacyModal'); })
+    .catch((e) => { console.error(e); errEl.textContent = 'Не сохранилось — проверь Rules в Firestore (⚙️).'; errEl.style.display='block'; })
+    .finally(() => { $('#intSaveBtn').textContent = 'Сохранить'; $('#intSaveBtn').disabled = false; });
+};
+
+function orgasmLabel(val, isMine){
+  const map = isMine
+    ? { me:'кончил(а) я', partner:'кончил(а) партнёр', both:'оба', none:'никто' }
+    : { me:'кончил(а) партнёр', partner:'кончил(а) я', both:'оба', none:'никто' };
+  return map[val] || '';
+}
+
+function renderIntimacyCalendar(){
+  if(!fbReady) return;
+  $('#intCalTitle').textContent = `${MONTH_NAMES[intCalMonth]} ${intCalYear}`;
+  const first = new Date(intCalYear, intCalMonth, 1);
+  const daysInMonth = new Date(intCalYear, intCalMonth+1, 0).getDate();
+  const startWeekday = (first.getDay() + 6) % 7;
+  const pad = (n) => String(n).padStart(2,'0');
+  const startStr = `${intCalYear}-${pad(intCalMonth+1)}-01`;
+  const endStr = `${intCalYear}-${pad(intCalMonth+1)}-${pad(daysInMonth)}`;
+  db.collection('intimacy').where('date','>=',startStr).where('date','<=',endStr).get().then(snap => {
+    const byDay = {};
+    snap.forEach(doc => { const d = doc.data(); byDay[d.date] = (byDay[d.date]||0) + 1; });
+    const grid = $('#intCalGrid'); grid.innerHTML = '';
+    ['пн','вт','ср','чт','пт','сб','вс'].forEach(d => { const el=document.createElement('div'); el.className='cal-dow'; el.textContent=d; grid.appendChild(el); });
+    for(let i=0;i<startWeekday;i++){ const el=document.createElement('div'); el.className='cal-cell empty'; grid.appendChild(el); }
+    for(let day=1; day<=daysInMonth; day++){
+      const dateStr = `${intCalYear}-${pad(intCalMonth+1)}-${pad(day)}`;
+      const cell = document.createElement('div'); cell.className='cal-cell';
+      const n = byDay[dateStr] || 0;
+      cell.innerHTML = `<span class="dnum">${day}</span><span class="moods">${n ? '🔥'.repeat(Math.min(n,3)) : ''}</span>`;
+      grid.appendChild(cell);
+    }
+  });
+  if(!intUnsub){
+    intUnsub = db.collection('intimacy').orderBy('createdAt','desc').limit(60).onSnapshot((snap) => {
+      const list = $('#intimacyList');
+      if(snap.empty){ list.innerHTML = '<div class="empty-state">Записей пока нет</div>'; return; }
+      list.innerHTML = '';
+      snap.forEach(doc => {
+        const d = doc.data();
+        const isMine = d.authorId === personId;
+        const card = document.createElement('div'); card.className='mem-card';
+        const bits = [];
+        if(d.duration) bits.push(`${d.duration} мин`);
+        if(d.type) bits.push(d.type);
+        if(d.protection) bits.push(d.protection);
+        if(d.orgasm) bits.push(orgasmLabel(d.orgasm, isMine));
+        card.innerHTML = `<div class="mem-body">
+          <div class="mem-meta" style="margin-bottom:8px;"><span class="who">${d.date}</span><span>${bits.join(' · ')}</span></div>
+          ${d.notes ? `<p class="mem-text"></p>` : ''}
+          <div class="mem-meta"><span>добавил(а) ${d.author||'—'}</span><span class="int-del" style="cursor:pointer;">удалить</span></div>
+        </div>`;
+        if(d.notes) card.querySelector('.mem-text').textContent = d.notes;
+        card.querySelector('.int-del').onclick = () => {
+          if(confirm('Удалить эту запись?')) doc.ref.delete();
+        };
+        list.appendChild(card);
+      });
+    }, (e) => { console.error(e); toast('Не читается база — проверь Rules в Firestore (⚙️)'); });
+  }
 }
 
 /* ---------------- Memories feed ---------------- */
